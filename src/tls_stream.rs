@@ -716,13 +716,14 @@ impl<S> TlsStream<S>
                         validated: false,
                     };
 
-                    let nread = if bufs[3].BufferType == winapi::SECBUFFER_EXTRA {
-                        self.enc_in.position() as usize - bufs[3].cbBuffer as usize
-                    } else {
-                        self.enc_in.position() as usize
-                    };
-                    self.consume_enc_in(nread);
-                    self.needs_read = (self.enc_in.position() == 0) as usize;
+                    let start = bufs[1].pvBuffer as usize - self.enc_in.get_ref().as_ptr() as usize;
+                    let end = start + bufs[1].cbBuffer as usize;
+                    self.dec_in.get_mut().clear();
+                    self.dec_in
+                        .get_mut()
+                        .extend_from_slice(&self.enc_in.get_ref()[start..end]);
+                    self.dec_in.set_position(0);
+
                     Ok(false)
                 }
                 e => Err(io::Error::from_raw_os_error(e as i32)),
